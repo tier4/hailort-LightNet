@@ -1,6 +1,9 @@
 # HailoRT LightNet for Low Power Edge AI
 
-file:///home/danumedatier4jp/work/Hailo_2310/hailort-LightNet/build/demo.mp4
+
+https://github.com/tier4/hailort-LightNet/assets/127905436/ec97e1b6-6db0-4a11-820d-2937eef7d4e2
+
+
 
 ## Purpose
 
