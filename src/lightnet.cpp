@@ -41,6 +41,22 @@ namespace lightNet
     return argmax2bgr;
   }
 
+  std::vector<cv::Vec3b> LightNet::getArgmaxToBgr2(const unsigned char colormap[MAX_DISTANCE][3], int len)
+  {
+    std::vector<cv::Vec3b> argmax2bgr; 
+    for (int i = 0; i < len; i++) {
+      unsigned char b = colormap[i][2];
+      unsigned char g = colormap[i][1];
+      unsigned char r = colormap[i][0];
+      cv::Vec3b color = {
+	static_cast<unsigned char>((int)b),
+	static_cast<unsigned char>((int)g),
+	static_cast<unsigned char>((int)r)};
+      argmax2bgr.push_back(color);
+    }
+    return argmax2bgr;
+  }  
+
   
   void LightNet::dequantize_tensor(float *f_data, const void *data, const hailo_vstream_info_t &info) 
   {
@@ -311,7 +327,8 @@ namespace lightNet
 
     for (int y = 0; y < height; y++) {
       int stride = width * y;
-      cv::Vec3b *ptr = mask.ptr<cv::Vec3b>(y); 
+      cv::Vec3b *ptr = mask.ptr<cv::Vec3b>(y);
+      
       for (int x = 0; x < width; x++) {
 	    //NHW
 	int id = data[stride + x];
@@ -321,6 +338,34 @@ namespace lightNet
     }
   }  
 
+  void LightNet::getDepthFromArgmax2bgr(cv::Mat &depth, void *data, const hailo_vstream_info_t &info, const std::vector<cv::Vec3b> &argmax2bgr)
+  {
+    hailo_format_type_t format_type = info.format.type;
+    hailo_quant_info_t quant_info = info.quant_info;
+    float qp_scale = quant_info.qp_scale;
+    float qp_zp = quant_info.qp_zp;
+    auto shape = info.shape;
+    auto width = shape.width;
+    auto height = shape.height;    
+    for (int y = height / 3; y < (int)height * 5 / 6; y++) {
+      cv::Vec3b *ptr = depth.ptr<cv::Vec3b>(y);
+      for (int x = 0; x < (int)width; x++) {
+	//NHW     
+	float rel;
+	if (format_type == HAILO_FORMAT_TYPE_UINT8) {
+	  rel =  dequantInt8(((uint8_t *)data)[y * width + x], qp_scale, qp_zp);	
+	} else if (format_type == HAILO_FORMAT_TYPE_UINT16){
+	  rel =  dequantInt16(((uint16_t *)data)[y * width + x], qp_scale, qp_zp);
+	} else {
+	  rel = ((float *)data)[y * width + x];
+	}	
+	int distance = rel * MAX_DISTANCE;
+	distance = distance >= MAX_DISTANCE ? MAX_DISTANCE-1 : distance;
+	ptr[x] = argmax2bgr[distance];
+      }
+    }
+  }
+  
   void LightNet::getDepth(cv::Mat &depth, void *data, const hailo_vstream_info_t &info, const std::string format)
   {
     hailo_format_type_t format_type = info.format.type;
@@ -330,7 +375,6 @@ namespace lightNet
     auto shape = info.shape;
     auto width = shape.width;
     auto height = shape.height;    
-
     for (int y = height / 3; y < (int)height * 5 / 6; y++) {
       for (int x = 0; x < (int)width; x++) {
 	//NHW     
@@ -407,7 +451,8 @@ namespace lightNet
 	  }
 	  cv::Vec3b *p_seg = seg.ptr<cv::Vec3b>((int)yy);
 	  cv::Vec3b value =  p_seg[(int)xx];
-	  for (int b = 0; b < 4; b++) {	    
+	  //	  for (int b = 0; b < 4; b++) {
+	  for (int b = 0; b < 1; b++) {	    
 	    if ((GRID_H-(int)(distance*gran_h)-b) >= 0) {
 	      cv::Vec3b *p_bev = bev.ptr<cv::Vec3b>(GRID_H-(int)(distance*gran_h)-b);
 	      p_bev[(int)x3d] = value;

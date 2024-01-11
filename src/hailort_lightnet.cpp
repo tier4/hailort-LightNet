@@ -26,6 +26,7 @@
 #include <omp.h>
 std::vector<cv::Vec3b> argmax2bgr4semseg;
 std::vector<cv::Vec3b> argmax2bgr4lane;
+std::vector<cv::Vec3b> argmax2bgr4depth;
 
 template<class T, class U>
 bool contain(const std::basic_string<T>& s, const U& v) {
@@ -94,8 +95,8 @@ void doPostprocessInThread(std::unique_ptr<lightNet::LightNet> lightNet, std::ve
       }
       cv::resize(outputs[output_index], resized, cv::Size(image_w, image_h), 0, 0, cv::INTER_NEAREST);
       cv::addWeighted(src, 1.0, resized, alpha, 0.0, src);
-      cv::namedWindow("mask" + std::to_string(output_index), cv::WINDOW_NORMAL);
-      cv::imshow("mask"+std::to_string(output_index), outputs[output_index]);
+      //cv::namedWindow("mask" + std::to_string(output_index), cv::WINDOW_NORMAL);
+      //cv::imshow("mask"+std::to_string(output_index), outputs[output_index]);
       segs.emplace_back(resized);
     } else {
       if (feature == 1) {
@@ -108,17 +109,18 @@ void doPostprocessInThread(std::unique_ptr<lightNet::LightNet> lightNet, std::ve
 	{
 #pragma omp section
 	  {
-	    lightNet->getDepth(outputs[output_index], (void *)f_data.data(), info, depthFormat);	
+	    //	    lightNet->getDepth(outputs[output_index], (void *)f_data.data(), info, depthFormat);
+	    lightNet->getDepthFromArgmax2bgr(outputs[output_index], (void *)f_data.data(), info, argmax2bgr4depth);	    
 	  }
 #pragma omp section
-	  {	  
+	  {
 	    for (auto &seg : segs) {
 	      lightNet->getBackProjection(bev, (void *)f_data.data(), image_w, image_h, seg, info);	  
 	    }
 	  }
 	}
-	cv::namedWindow("depth" + std::to_string(output_index), cv::WINDOW_NORMAL);
-	cv::imshow("depth"+std::to_string(output_index), outputs[output_index]);             
+	//cv::namedWindow("depth" + std::to_string(output_index), cv::WINDOW_NORMAL);
+	//cv::imshow("depth"+std::to_string(output_index), outputs[output_index]);             
 	//cv::Mat heightmap = lightNet->getHeightmap((void *)results[output_index].data(), resized.cols, resized.rows, info);
 	//cv::namedWindow("heightmap" + std::to_string(output_index), cv::WINDOW_NORMAL);
 	//cv::imshow("heightmap"+std::to_string(output_index), heightmap);	
@@ -212,7 +214,8 @@ int main(int argc, char* argv[])
   const int input_h = input_info.shape.height;
   auto lightNet = std::make_unique<lightNet::LightNet>();
   argmax2bgr4semseg = lightNet->getArgmaxToBgr(&(semseg_colormap[0]), 20);
-  argmax2bgr4lane = lightNet->getArgmaxToBgr(lane_colormap, 3);  
+  argmax2bgr4lane = lightNet->getArgmaxToBgr(lane_colormap, 3);
+  argmax2bgr4depth = lightNet->getArgmaxToBgr2(magma_colormap, MAX_DISTANCE);    
   float elapsed = 0.0;
   float inftime = 0.0;  
 
@@ -236,16 +239,25 @@ int main(int argc, char* argv[])
     input = lightNet->preprocess(src, input_w, input_h);
   }
   Timer timer;
-  float max_power = 0.0;      
+  float max_power = 0.0;
+  //  int frame_count = 0;
   while (1) {
-    if (src.empty() == true) break;
+    if (src.empty() == true) {
+      if (cam_id != -1) {
+	video.open(cam_id);
+      } else {
+	video.open(videoName);
+      }
+      video >> src;
+      continue;
+    }
     timer.reset();
     cv::resize(src, src, cv::Size(1440, 960), 0, 0, cv::INTER_NEAREST);    
     cv::Mat in = input.clone();
     cv::Mat vis = src.clone();
     cv::Mat copy = src.clone();
-    cv::namedWindow("img", cv::WINDOW_NORMAL);
-    cv::imshow("img", copy);    
+    //cv::namedWindow("img", cv::WINDOW_NORMAL);
+    //cv::imshow("img", copy);    
     std::vector<std::vector<uint8_t>> prev(results.begin(), results.end());
     std::thread inference_thread(inferInThread, move(hrtCommon), std::ref(vstreams->first),std::ref(vstreams->second), std::ref(in.data), std::ref(results), &inftime);
     std::thread postprocess_thread(doPostprocessInThread, move(lightNet), std::ref(vstreams->first), std::ref(vstreams->second), std::ref(outputs), std::ref(prev), std::ref(vis), elapsed, inftime, max_power);
@@ -258,7 +270,14 @@ int main(int argc, char* argv[])
       auto measurement_result = physical_device.get().get_power_measurement(MEASUREMENT_BUFFER_INDEX, true);
       //hrtCommon->printMeasurementsResults(physical_device.get(), measurement_result.value(), measurement_type);
       max_power = measurement_result.value().max_value;
-    }    
+    }
+    /*
+    std::ostringstream sout;
+    sout << std::setfill('0') << std::setw(6) << frame_count++;	  
+    std::string name = "log/frame_" + sout.str() + ".jpg";
+    std::cout << name <<std::endl;
+    cv::imwrite(name, vis);    
+    */
   }
   
   for (auto &physical_device : physical_devices.value()) {  

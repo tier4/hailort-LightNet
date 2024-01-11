@@ -48,6 +48,7 @@ namespace lightNet
 
 
     std::vector<cv::Vec3b>  getArgmaxToBgr(const unsigned char *colormap, int len);
+    std::vector<cv::Vec3b>  getArgmaxToBgr2(const unsigned char colormap[MAX_DISTANCE][3], int len);    
     
     void dequantize_tensor(float *f_data, const void *data, const hailo_vstream_info_t &info) ;    
     
@@ -132,7 +133,10 @@ namespace lightNet
      * @param[in] info Hailo output stream information
      * @param[in] format Color format for depth visualization
      * @param[out] depth depth image
-     */                                        
+     */
+
+    void getDepthFromArgmax2bgr(cv::Mat &depth, void *data, const hailo_vstream_info_t &info, const std::vector<cv::Vec3b> &argmax2bgr);
+    
     void getDepth(cv::Mat &depth, void *data, const hailo_vstream_info_t &info, const std::string format);
 
     /**
