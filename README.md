@@ -1,6 +1,10 @@
 # HailoRT LightNet for Low Power Edge AI
 
 
+https://github.com/tier4/hailort-LightNet/assets/127905436/ec97e1b6-6db0-4a11-820d-2937eef7d4e2
+
+
+
 ## Purpose
 
 This package implements LightNet inference on Hailo-8 chip with HailoRT for low power inference.
