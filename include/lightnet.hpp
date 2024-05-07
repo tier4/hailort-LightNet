@@ -90,9 +90,10 @@ namespace lightNet
      * @param[in] input_h height for DNN inputs
      * @param[in] numClasses number of classes
      * @param[in] thresh threshould for detections
+     * @param[in] num_anchors number of anchors
      * @param[out] binfo final bbox 
      */                        
-    std::vector<BBoxInfo> decodeTensor(OutputVStream &output_stream, void *outputs, const float *anchors, const int image_w, const int image_h, const int input_w, const int input_h, const int numClasses, const float thresh);
+    std::vector<BBoxInfo> decodeTensor(OutputVStream &output_stream, void *outputs, const float *anchors, const int image_w, const int image_h, const int input_w, const int input_h, const int numClasses, const float thresh, const int num_anchors);
 
     /**
      * @brief draw BBox

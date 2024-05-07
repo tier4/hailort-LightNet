@@ -29,9 +29,9 @@ namespace lightNet
   {
     std::vector<cv::Vec3b> argmax2bgr; 
     for (int i = 0; i < len; i++) {
-      unsigned char b = colormap[3 * i + 0];
+      unsigned char b = colormap[3 * i + 2];
       unsigned char g = colormap[3 * i + 1];
-      unsigned char r = colormap[3 * i + 2];
+      unsigned char r = colormap[3 * i + 0];
       cv::Vec3b color = {
 	static_cast<unsigned char>((int)b),
 	static_cast<unsigned char>((int)g),
@@ -190,7 +190,7 @@ namespace lightNet
     binfo.push_back(bbi);
   }
 
-  std::vector<BBoxInfo> LightNet::decodeTensor(OutputVStream &output_stream, void *outputs, const float *anchors, const int image_w, const int image_h, const int input_w, const int input_h, const int numClasses, const float thresh)
+  std::vector<BBoxInfo> LightNet::decodeTensor(OutputVStream &output_stream, void *outputs, const float *anchors, const int image_w, const int image_h, const int input_w, const int input_h, const int numClasses, const float thresh, const int num_anchors)
   {
     auto info = output_stream.get_info();
     auto shape = info.shape;
@@ -201,7 +201,7 @@ namespace lightNet
     hailo_format_type_t format_type = info.format.type;    
     const float qp_zp = quant_info.qp_zp;
 
-    int num_anchors = 3;
+
     std::vector<BBoxInfo> binfo;
     float scale_x_y = 2.0;
     float offset =  0.5 * (scale_x_y-1.0);
@@ -289,7 +289,7 @@ namespace lightNet
 	int x2 = bbi.box.x2;
 	int y2 = bbi.box.y2;
 	//    if (id==0)
-	cv::rectangle(img, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(colormap[3*id+0], colormap[3*id+1], colormap[3*id+2]), 2);
+	cv::rectangle(img, cv::Point(x1, y1), cv::Point(x2, y2), cv::Scalar(colormap[3*id+2], colormap[3*id+1], colormap[3*id+0]), 2);
       }
   } 
 

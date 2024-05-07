@@ -69,7 +69,8 @@ void doPostprocessInThread(std::unique_ptr<lightNet::LightNet> lightNet, std::ve
   cv::Mat bev = cv::Mat::zeros(GRID_H, GRID_W, CV_8UC3);
   const int image_w = src.cols;
   const int image_h = src.rows;
-  const float anchors[] = {7, 14,  17, 21,  11, 38,  31, 40,  21, 84,  57, 69,  87,130, 148,198, 215,337};
+  //const float anchors[] = {7, 14,  17, 21,  11, 38,  31, 40,  21, 84,  57, 69,  87,130, 148,198, 215,337};
+  const float anchors[] = {10, 14,  22, 22,  15, 49,  35, 36,  56, 52,  38,106,  92, 73, 114,118, 102,264, 201,143, 272,232, 415,278, 274,476, 522,616, 968,730};  
   const float nmsThresh = get_nms_thresh();
   const int numClasses = get_classes();
   const float thresh = get_score_thresh();  
@@ -84,6 +85,7 @@ void doPostprocessInThread(std::unique_ptr<lightNet::LightNet> lightNet, std::ve
     auto feature = shape.features;
     //std::cout << info.name << std::endl;
     if (contain(std::string(info.name), "/argmax")) {
+
       //segmentation
       cv::Mat mask, resized;
       float alpha = 0.45;
@@ -98,8 +100,10 @@ void doPostprocessInThread(std::unique_ptr<lightNet::LightNet> lightNet, std::ve
       //cv::namedWindow("mask" + std::to_string(output_index), cv::WINDOW_NORMAL);
       //cv::imshow("mask"+std::to_string(output_index), outputs[output_index]);
       segs.emplace_back(resized);
-    } else {
+
+    } else {      
       if (feature == 1) {
+
 	//depth estimation
 	depth_index = output_index;
 	std::vector<float> f_data(width * height, 0);
@@ -123,10 +127,12 @@ void doPostprocessInThread(std::unique_ptr<lightNet::LightNet> lightNet, std::ve
 	//cv::imshow("depth"+std::to_string(output_index), outputs[output_index]);             
 	//cv::Mat heightmap = lightNet->getHeightmap((void *)results[output_index].data(), resized.cols, resized.rows, info);
 	//cv::namedWindow("heightmap" + std::to_string(output_index), cv::WINDOW_NORMAL);
-	//cv::imshow("heightmap"+std::to_string(output_index), heightmap);	
+	//cv::imshow("heightmap"+std::to_string(output_index), heightmap);
+
       } else {
 	//Object Detection
-	std::vector<lightNet::BBoxInfo> b = lightNet->decodeTensor(std::ref(output_streams[output_index]), (void *)results[output_index].data(), &anchors[det_count*2*3], image_w, image_h, input_w, input_h, numClasses, thresh);
+	int num_anchors = 5;
+	std::vector<lightNet::BBoxInfo> b = lightNet->decodeTensor(std::ref(output_streams[output_index]), (void *)results[output_index].data(), &anchors[det_count*2*num_anchors], image_w, image_h, input_w, input_h, numClasses, thresh, num_anchors);
 	bbox.insert(bbox.end(), b.begin(), b.end());
 	det_count++;
       }
